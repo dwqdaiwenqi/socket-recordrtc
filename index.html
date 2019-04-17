@@ -128,7 +128,8 @@
                 mediaStream = stream;
                           
                 recorder = RecordRTC(stream, {
-                  type: 'audio'
+                  type: 'audio',
+                  numberOfAudioChannels: 1
                 })
                 
                 recorder.startRecording()
@@ -139,12 +140,19 @@
                 var blob = recorder.getBlob();
                 ////////////////////
                 //getting unique identifier for the file name
-                var fileName = (+new Date()) + '.wav'
+                // var fileName = 'fileName-23333' + '.wav'
                 
+                // var file = new File([blob], fileName, {
+								// 		// type: 'video/webm'
+								// 		type:'video/wav'
+                // })
+                var fileName = 'fileName-23333' + '.mp3'
                 var file = new File([blob], fileName, {
 										// type: 'video/webm'
-										type:'video/wav'
-                });
+										type:'video/mp3'
+                })
+                
+                // debugger
                 
                 xhr(options.uploadfile_url, file, function(responseText) {
                   console.log(responseText)
@@ -162,7 +170,7 @@
                     if (request.readyState == 4 && request.status == 200) {
                         callback(request.responseText);
                     }
-                };
+                }
                         
                 request.upload.onprogress = function(event) {
                     // progressBar.max = event.total;
@@ -171,9 +179,9 @@
                 };
                         
                 request.upload.onload = function() {
-                    // percentage.style.display = 'none';
-                    // progressBar.style.display = 'none';
-                };
+                  // percentage.style.display = 'none';
+                  // progressBar.style.display = 'none';
+                }
                 request.open('POST', url)
                 var formData = new FormData()
                 formData.append('file', data)
