@@ -4,17 +4,24 @@ const http = require('http')
 const server = require('http').createServer(app)
 const io = require('socket.io')(server)
 
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser')
+const formidable = require('formidable')
+
+const shell = require('shelljs')
+
+const port = 2333
+const maxFieldsSize = 1 * 1024 * 1024 //内存大小
+const maxFileSize = .3 * 1024 * 1024 //
 
 // let a  = 1231
 
 
-app.use(express.static(__dirname+'/',{index:'index.html'})); 
+app.use(express.static(__dirname+'/',{index:'index.html'})) 
 
-const port = 2333
+app.use('/uploads',express.static(__dirname + '/uploads/'))
 
 
-app.use( bodyParser.urlencoded({extended: true ,limit: '10mb'}) )
+app.use( bodyParser.urlencoded({extended: true ,limit: '1mb'}) )
 
 
 console.log(`listen at ${port}`)
@@ -22,85 +29,61 @@ server.listen(port)
 
 
 app.post('/uploadFile/:userid', (request, response)=>{
-
-	// console.log(`attr 2:${socket}`)
 	response.header('Access-Control-Allow-Origin', '*')
 
 	console.log(`userid:${request.params.userid}`)
 
 	// parse a file upload
-	var mime = require('mime');
-	var formidable = require('formidable');
-	var util = require('util');
 
-	var form = new formidable.IncomingForm();
+	var form = new formidable.IncomingForm()
 
-	var dir = !!process.platform.match(/^win/) ? '\\uploads\\' : '/uploads/';
+	var dir = !!process.platform.match(/^win/) ? '\\uploads\\' : '/uploads/'
 
-	form.uploadDir = __dirname + dir;
+	form.uploadDir = __dirname + dir
 
-	//console.log(`uploadDir:${form.uploadDir}`)
-	//console.log(`request:${request}`)
-	form.keepExtensions = true;
-	form.maxFieldsSize = 10 * 1024 * 1024;
-	form.maxFields = 1000;
-	form.multiples = false;
+	form.keepExtensions = true
+	form.maxFieldsSize = maxFieldsSize
+	form.maxFileSize = maxFileSize
+	form.multiples = false
 
+	form.parse(request, (err, fields, files) =>{
 
-			
-	function getHeaders(opt, val) {
-			try {
-					var headers = {};
-					headers["Access-Control-Allow-Origin"] = "https://secure.seedocnow.com";
-					headers["Access-Control-Allow-Methods"] = "POST, GET, PUT, DELETE, OPTIONS";
-					headers["Access-Control-Allow-Credentials"] = true;
-					headers["Access-Control-Max-Age"] = '86400'; // 24 hours
-					headers["Access-Control-Allow-Headers"] = "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept";
-
-					if (opt) {
-							headers[opt] = val;
-					}
-
-					return headers;
-			} catch (e) {
-					return {};
-			}
-	}
-
-
-	form.parse(request, function(err, fields, files) {
-			const file = util.inspect(files);
-			
-			// console.log(file.split('path:'))
-
-			// var ar = file.match(/name\:(.+)\,/)
-			//console.log(ar[1])
-
-			response.writeHead(200, getHeaders('Content-Type', 'application/json'));
-			
-			const fileName = file.split('path:')[1].split('\',')[0].split(dir)[1].toString().replace(/\\/g, '').replace(/\//g, '');
-			const fileURL = 'http://' + 'localhost' + ':' + port + '/uploads/' + fileName;
-
-			response.write(JSON.stringify({
-				status:'1',
-				message:'success!!!!!',
-				data:{
-					userid:request.params.userid+'@@@@@',
-					fileURL
-				}
-
+		if(err){
+			console.log('err:',err)
+			response.end(JSON.stringify({
+				status: -1,
+				message:'err',
+				data:{}
 			}))
-			response.end()
+			return 
+		}
 
+		// console.log(files.file.size,form.maxFieldsSize)
 
-			io.emit('server-client:uploadfile',{
-				userid:request.params.userid,
+		const [,file_name,file_ext] = files.file.path.match(/([^\/]+)\.(wav|mp3|ogg)/)
+		
+		const fileURL = 'http://' + 'localhost' + ':' + port + '/uploads/' + file_name+'.'+file_ext
+
+		response.end(JSON.stringify({
+			status: 1,
+			message:'success',
+			data:{
+				userid:request.params.userid+'@@@@@',
 				fileURL
-			})
+			}
+		}))
 
-	});
+		io.emit('server-client:uploadfile',{
+			userid:request.params.userid,
+			fileURL
+		})
+
+	})
 
 })
+// 20秒150kb
+
+// ffmpeg -i  uploads/upload_4bd5622758528ad8e3daf25c39042649.wav -acodec libmp3lame audio.mp3
 
 
 io.on("connection",function(socket){
