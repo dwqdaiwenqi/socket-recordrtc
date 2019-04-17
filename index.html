@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +17,9 @@
             body {
                 background-color: white;
                 border: 1px solid rgb(15, 158, 238);
-                margin: 1% 35%;
+                /* margin: 1% 35%; */
+                box-sizing: border-box;
+                padding:10px;
                 text-align: center;
             }
             hr {
@@ -33,89 +34,130 @@
             a:active { color: #000; }
             
             audio, video {
-                border: 1px solid rgb(15, 158, 238); width: 94%;
+                border: 1px solid rgb(15, 158, 238); 
+                /* width: 94%; */
             }
             button[disabled], input[disabled] { background: rgba(216, 205, 205, 0.2); border: 1px solid rgb(233, 224, 224);}
         
 </style>
     <main>
-        <p><input id="record" type="button" value="record!"></p>
-      <section id="room"></section>
+        <!-- <p><input id="record" type="button" value="record!"></p> -->
+      <section id="room">
+
+
+      </section>
+      
 
       <section>
-        <h1>RTC to Node.js</h1>
-        <p>
-            <video></video> 
-        </p><hr />
         
-        <div>
-            <label id="percentage">0%</label>
-            <progress id="progress-bar" value=0></progress><br />
-        </div>
-            
-        <hr />
 
         <div>
             <button id="btn-start-recording">Start Recording</button>
-            <button id="btn-stop-recording" disabled="">Stop Recording</button>
+            <button id="btn-stop-recording">Stop Recording</button>
         </div>
 
-        
+
+        <section id="rtc-room" ></section>
         <script>
-            // fetching DOM references
-            var btnStartRecording = document.querySelector('#btn-start-recording');
-            var btnStopRecording  = document.querySelector('#btn-stop-recording');
-            
-            var videoElement      = document.querySelector('video');
-            
-            var progressBar = document.querySelector('#progress-bar');
-            var percentage = document.querySelector('#percentage');
-            
-            var recorder;
-            // reusable helpers
-            
-            // this function submits recorded blob to nodejs server
+         var userid = location.hash.slice(1)
+        </script>
+      </section>
+    </main>
+    
+    <script>
+    // // var userid = location.hash.slice(1)
+    // var rtop = $('#room'
+    //     　// 连接服务器
+    // var socket = io.connect('localhost:2333')
+
+
+    // //////setTimeout(()=>{
+    // socket.emit("client-server:join",{ userid })
+
+    // //},1234)
+
+    // socket.on("server-client:join",function(data){
+    //     rtop.append('<p>'+data.userid+'加入!</p>');
+    // });
+
+
+
+    // //////////／／／／／／  玩家们上传了音频并生成了url
+    // socket.on('server-client:uploadfile',(data)=>{
+    //   console.log('server-client:uploadfile',data)
+    //   $('#rtc-room').append(`<p>${JSON.stringify(data)}</p>`)
+
+    // })
+    // //////////／／／／／／／／
+ 
+    // socket.on("server-client:disconnect",function(data){
+    //     rtop.append('<p>'+data.user_id+'离开!</p>')
+    // });
+
+
+
+
+
+    ////
+    ;(function(){
+
+      const xyy = {}
+
+      xyy.RtcRoom = (host,options)=>{
+        let mediaStream = null
+        let recorder = null
+        let socket = null
+        
+        let that = {
+          startRecord(){
+
+            // reusable getUserMedia
+            var captureUserMedia = (success_callback)=>{
+              var session = {
+                  audio: true
+                  //video: true
+              };
+              
+              navigator.getUserMedia(session, success_callback, function(error) {
+                  alert('Unable to capture your camera. Please check console logs.');
+                  console.error(error);
+              });
+            }
+
+            captureUserMedia((stream) =>{
+                mediaStream = stream;
+                          
+                recorder = RecordRTC(stream, {
+                  type: 'audio'
+                })
+                
+                recorder.startRecording()
+            })
+          },
+          stopRecord(){
             function postFiles() {
                 var blob = recorder.getBlob();
-
                 ////////////////////
                 //getting unique identifier for the file name
-                // var fileName = generateRandomString() + '.wav';
-
-                var fileName = (+new Date()) + '.wav';
-
-              //  console.log(fileName,'#################')
+                var fileName = (+new Date()) + '.wav'
                 
                 var file = new File([blob], fileName, {
 										// type: 'video/webm'
 										type:'video/wav'
                 });
-                //videoElement.src = '';
-                //videoElement.poster = '/ajax-loader.gif';
-                xhr('/uploadFile', file, function(responseText) {
-                    var fileURL = JSON.parse(responseText).fileURL;
-                    
-										
-                    let $audio = new Audio()
-                    $audio.src = fileURL
-                    $audio.play()
-
-                    
-                    document.body.appendChild($audio)
-
-                    console.log($audio)
-
-                    document.querySelector('#footer-h2').innerHTML = '<a href="' + videoElement.src + '">' + videoElement.src + '</a>';
-                });
+                
+                xhr(options.uploadfile_url, file, function(responseText) {
+                  console.log(responseText)
+                })
                 
                 if(mediaStream) mediaStream.stop();
-
                 //////////////////////
             }
             
             // XHR2/FormData
-            function xhr(url, data, callback) {
-                var request = new XMLHttpRequest();
+
+            var xhr = (url, data, callback)=>{
+              var request = new XMLHttpRequest();
                 request.onreadystatechange = function() {
                     if (request.readyState == 4 && request.status == 200) {
                         callback(request.responseText);
@@ -123,111 +165,76 @@
                 };
                         
                 request.upload.onprogress = function(event) {
-                    progressBar.max = event.total;
-                    progressBar.value = event.loaded;
-                    progressBar.innerHTML = 'Upload Progress ' + Math.round(event.loaded / event.total * 100) + "%";
+                    // progressBar.max = event.total;
+                    // progressBar.value = event.loaded;
+                    // progressBar.innerHTML = 'Upload Progress ' + Math.round(event.loaded / event.total * 100) + "%";
                 };
                         
                 request.upload.onload = function() {
-                    percentage.style.display = 'none';
-                    progressBar.style.display = 'none';
+                    // percentage.style.display = 'none';
+                    // progressBar.style.display = 'none';
                 };
-                request.open('POST', url);
-                var formData = new FormData();
-                formData.append('file', data);
-                request.send(formData);
+                request.open('POST', url)
+                var formData = new FormData()
+                formData.append('file', data)
+                request.send(formData)
             }
-            // generating random string
-            function generateRandomString() {
-                if (window.crypto) {
-                    var a = window.crypto.getRandomValues(new Uint32Array(3)),
-                        token = '';
-                    for (var i = 0, l = a.length; i < l; i++) token += a[i].toString(36);
-                    return token;
-                } else {
-                    return (Math.random() * new Date().getTime()).toString(36).replace( /\./g , '');
-                }
-            }
-            var mediaStream = null;
-            // reusable getUserMedia
-            function captureUserMedia(success_callback) {
-                var session = {
-                    audio: true
-                    //video: true
-                };
-                
-                navigator.getUserMedia(session, success_callback, function(error) {
-                    alert('Unable to capture your camera. Please check console logs.');
-                    console.error(error);
-                });
-            }
-            // UI events handling
-            btnStartRecording.onclick = function() {
-                btnStartRecording.disabled = true;
-                
-                captureUserMedia(function(stream) {
-                    mediaStream = stream;
-                    
-										//videoElement.src = window.URL.createObjectURL(stream);
-										videoElement.srcObject = stream
-                    videoElement.play();
-                    videoElement.muted = true;
-                    videoElement.controls = false;
-                    
-                    recorder = RecordRTC(stream, {
-                        type: 'audio'
-                    });
-                    
-                    recorder.startRecording();
-                    
-                    // enable stop-recording button
-                    btnStopRecording.disabled = false;
-                });
-            };
-            btnStopRecording.onclick = function() {
-                btnStartRecording.disabled = false;
-                btnStopRecording.disabled = true;
-                
-                recorder.stopRecording(postFiles);
-            };
-            window.onbeforeunload = function() {
-                startRecording.disabled = false;
-            };
-        </script>
-        <footer style="width:100%;position: fixed; right: 0; text-align: center;color:red;">
-            <h2 id="footer-h2"></h2>
-        </footer>
-      </section>
-    </main>
+           
+            recorder.stopRecording(postFiles)
+
+          },
+          onFuc:null,
+          on(fns,fuc){
+            this.onFuc = fuc
+          },
+          i(){
+            socket = io.connect(host)
+
+            socket.emit("client-server:join",{ userid:options.userid })
+
+            socket.on('server-client:uploadfile',data=>{
+              this.onFuc(data)
+              // console.log(data,'########')
+            })
+            
+
+
+            return this
+          }
+        }
+        return that.i()
+      }
+
+
+
+
+      {
+        let record_room = xyy.RtcRoom('localhost:2333',{
+          userid,
+          uploadfile_url:`/uploadFile/${userid}`
+        })
+
+        // 玩家们上传了音频并生成了url 
+        record_room.on('server-client:uploadfile',data=>{
+          console.log('server-client:uploadfile',data)
+          $('#rtc-room').append(`<p>${JSON.stringify(data)}</p>`)
+        })
+
+        
+        document.querySelector('#btn-start-recording').onclick = ()=>{
+          record_room.startRecord()
+        }
+        document.querySelector('#btn-stop-recording').onclick = ()=>{
+          record_room.stopRecord()
+        }
+
+      }
+      
+
+    })()
+
+
+    ///
     
-    <script>
-
-    // var userid = location.hash.slice(1)
-    // var rtop = $('#room')
-    //     　// 连接服务器
-    // var socket = io.connect('localhost:80')
-    // socket.emit("client-server:join",{ userid })
-
-    // socket.on("server-client:join",function(data){
-    //     rtop.append('<p>'+data.userid+'加入!</p>');
-    // });
-
-   
-    // socket.on("server-client:message",function(data){
-    //     rtop.append(`<p>${data.msg}</p>`)
-       
-    // });
-
-    // socket.on("server-client:disconnect",function(data){
-    //     rtop.append('<p>'+data.user_id+'离开!</p>')
-    // });
-    
-	// 	document.querySelector('#record').addEventListener('click',e=>{
-	// 		socket.emit("client-server:message",{
-	// 			userid,
-	// 			msg : `${userid}: ${Date.now()}`
-	// 		})
-	// 	})
     </script>
 </body>
-</html>
