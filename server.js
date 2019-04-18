@@ -8,7 +8,6 @@ const bodyParser = require('body-parser')
 const formidable = require('formidable')
 
 const shell = require('shelljs')
-const log4js = require('log4js')
 
 const port = 2333
 const maxFieldsSize = 1 * 1024 * 1024 //内存大小
@@ -26,9 +25,6 @@ app.use( bodyParser.urlencoded({extended: true ,limit: '1mb'}) )
 
 console.log(`listen at ${port}`)
 server.listen(port)
-
-
-
 
 
 app.post('/uploadFile/:userid', (request, response)=>{
