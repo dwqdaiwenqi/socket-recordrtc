@@ -8,13 +8,13 @@ const bodyParser = require('body-parser')
 const formidable = require('formidable')
 
 const shell = require('shelljs')
+const log4js = require('log4js')
 
 const port = 2333
 const maxFieldsSize = 1 * 1024 * 1024 //内存大小
 const maxFileSize = .3 * 1024 * 1024 //
 
-// let a  = 1231
-
+// console.log(`####${Date.now()}`)
 
 app.use(express.static(__dirname+'/',{index:'index.html'})) 
 
@@ -26,6 +26,9 @@ app.use( bodyParser.urlencoded({extended: true ,limit: '1mb'}) )
 
 console.log(`listen at ${port}`)
 server.listen(port)
+
+
+
 
 
 app.post('/uploadFile/:userid', (request, response)=>{
@@ -85,9 +88,13 @@ app.post('/uploadFile/:userid', (request, response)=>{
 
 // ffmpeg -i  uploads/upload_4bd5622758528ad8e3daf25c39042649.wav -acodec libmp3lame audio.mp3
 
-
+// pm2 start server.js
+// pm2 stop server.js
+// pm2 logs
+// pm2 list
+// pm2 restart all
 io.on("connection",function(socket){
-		console.log("a user connected");
+		console.log("a user connected")
 
     socket.on("disconnect",function(){
         console.log("a user disconnect");
