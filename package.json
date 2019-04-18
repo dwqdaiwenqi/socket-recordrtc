@@ -12,8 +12,11 @@
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
     "formidable": "latest",
+    "log4js": "^4.1.0",
     "mime": "latest",
+    "pm2": "^3.5.0",
     "recordrtc": "latest",
+    "shelljs": "^0.8.3",
     "socket.io": "^2.2.0"
   }
 }
