@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>nodejs-cluster-redis</title>
+</head>
+<body>
+	<main>
+		<p>nodejs-cluster-redis</p>
+		<p>
+			<input id="ipt_emit" type="button" value="emit">
+		</p>
+		<ul id="msg-wrap">
+
+		</ul>
+	</main>
+	<script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+	<script>
+
+		let userid = location.hash.slice(1)
+
+		//模拟iphash
+		let host = Math.random()>.5?'localhost':'172.20.1.41'
+		let socket = io.connect(`http://${host}:8888`)
+		socket.on('xmessage',data=>{
+			console.log('########',data)
+		})
+		socket.on('server->client:event1',(data)=>{
+			console.log('###',data)
+			let $li = document.createElement('li')
+			$li.innerHTML = JSON.stringify(data)
+			document.querySelector('#msg-wrap').appendChild($li)
+		})
+
+		document.querySelector('#ipt_emit').onclick = ()=>{
+			socket.emit('client->server:event1',{userid})
+			
+		}
+
+		// let xhr = new XMLHttpRequest()
+		// xhr.onload = ()=>{
+		// 	console.log(xhr.responseText)
+		// }
+		// xhr.open('GET','http://localhost:8888')
+		// xhr.send(null)
+
+	</script>
+</body>
+</html>
