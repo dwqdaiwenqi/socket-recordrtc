@@ -23,7 +23,7 @@
 
 		//模拟iphash
 		let host = Math.random()>.5?'localhost':'172.20.1.41'
-		let socket = io.connect(`http://${host}:8888`)
+		let socket = io.connect(`https://${host}:8888`)
 		socket.on('xmessage',data=>{
 			console.log('########',data)
 		})
