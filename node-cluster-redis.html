@@ -47,109 +47,99 @@
 		}
 	</script>
 	<script>
+		var xyy = window.xyy = {}
 		var RtcRoom =(host,options={})=>{
 			
 			let mediaStream = null
 			let recorder = null
 			let socket = null
 
-			// options = Object.assign({},options,{
-			// 	uploadfile_url:`http://172.20.1.41:3333/uploadFile/${options.gameid}/${options.userid}`
-			// })
+			// options = Object.assign({},options,{	 })
 			
 			let that = {
 				socket,
-				startRecord(){
-					//debugger
-					// reusable getUserMedia
-					var captureUserMedia = (success_callback)=>{
-						var session = {
-								audio: true
-								//video: true
-						}
-						try{
-							// navigator.getUserMedia(session, success_callback, (error)=> {
-							// 	alert('Unable to capture your camera. Please check console logs.')
-							// 	console.error(error);
-							// })
-							navigator.mediaDevices.getUserMedia(session).then(stream=>{
-								success_callback(stream)
-							}).catch(e=>{
-								alert(`getUserMedia 1:${e}`)
-							})
-						}catch(e){
-							alert(`getUserMedia 2:${e}`)
-						}
-						
-					}
-					captureUserMedia((stream) =>{
-						// alert('stream!')
-
-							mediaStream = stream
-												
-							recorder = RecordRTC(stream, {
-								type: 'audio',
-								numberOfAudioChannels: 1
-							})
-							
-							recorder.startRecording()
-					})
-				},
-				stopRecord(){
-					function postFiles() {
-							var blob = recorder.getBlob();
-							////////////////////
-							//getting unique identifier for the file name
-							// var fileName = 'fileName-23333' + '.wav'
-							
-							// var file = new File([blob], fileName, {
-							// 		// type: 'video/webm'
-							// 		type:'video/wav'
-							// })
-							var fileName = 'fileName-23333' + '.mp3'
-							var file = new File([blob], fileName, {
-								// type: 'video/webm'
-								type:'video/mp3'
-							})
-
-							socket.emit('client->server:uploadfile',{
-								buffer:file,
-								gameid:options.gameid,
-								userid:options.userid
-							})
-						
-							
-							if(mediaStream) mediaStream.stop()
-							//////////////////////
-					}
-
-					recorder.stopRecording(postFiles)
-					
-				},
 				onFuc:null,
-				on(fns,fuc){
-					this.onFuc = fuc
+				join({userid}={}){
+					let user = {
+						userid,
+						startRecord(){
+							var captureUserMedia = (success_callback)=>{
+								var session = {
+									audio: true
+									//video: true
+								}
+								try{
+									navigator.mediaDevices.getUserMedia(session).then(stream=>{
+										success_callback(stream)
+									}).catch(e=>{
+										alert(`getUserMedia 1:${e}`)
+									})
+								}catch(e){
+									alert(`getUserMedia 2:${e}`)
+								}		
+							}
+							captureUserMedia((stream) =>{
+								mediaStream = stream
+													
+								recorder = RecordRTC(stream, {
+									type: 'audio',
+									numberOfAudioChannels: 1
+								})
+								
+								recorder.startRecording()
+							})
+						},
+						stopRecord(){
+							var postFiles = ()=>{
+								// alert('postfiles!')
+								var blob = recorder.getBlob()
+								////////////////////
+					
+								var fileName = 'fileName-23333' + '.mp3'
+								var file = new File([blob], fileName, {
+									// type: 'video/webm'
+									type:'video/mp3'
+								})
+
+								socket.emit('client->server:uploadfile',{
+									buffer:file,
+									gameid:options.gameid,
+									userid:this.userid
+								})
+									
+								if(mediaStream) mediaStream.stop()
+							}
+						
+							recorder.stopRecording(postFiles)
+						}
+					}
+
+					this.user = user
+					return user
+				},
+				onuploadFile(fuc){
+					this.handle_onuploadFile = fuc
 				},
 				i(){
 					////socket.close()
 				
 					this.socket = socket = io.connect(host)
-					socket.on('xmessage',data=>{
+					// socket.on('xmessage',data=>{
 
-						console.log('########',data)
-					})
-					socket.on('server->client:event1',(data)=>{
-						console.log('###',data)
-						let $li = document.createElement('li')
-						$li.innerHTML = JSON.stringify(data)
-						document.querySelector('#msg-wrap').appendChild($li)
-					})
+					// 	console.log('########',data)
+					// })
+					// socket.on('server->client:event1',(data)=>{
+					// 	console.log('###',data)
+					// 	let $li = document.createElement('li')
+					// 	$li.innerHTML = JSON.stringify(data)
+					// 	document.querySelector('#msg-wrap').appendChild($li)
+					// })
 					socket.on('server->client:uploadfile',data=>{
 
-						console.log(data,'@@@@')
+						//console.log(data,'@@@@')
 					//return
 						if(data.gameid==options.gameid){
-							this.onFuc(data)
+							this.handle_onuploadFile(data)
 						}
 						// console.log(data,'########')
 					})
@@ -173,48 +163,187 @@
 			}
 			return that.i()
 		}
+
+		xyy.RtcRoom = RtcRoom
+
+
+
+	  {
+			let recorder
+			let mediaStream
+			xyy.startRecord = ()=>{
+				var captureUserMedia = (success_callback)=>{
+					try{
+						navigator.mediaDevices.getUserMedia({audio: true}).then(stream=>{
+							success_callback(stream)
+						}).catch(e=>{
+							alert(`getUserMedia 1:${e}`)
+						})
+					}catch(e){
+						alert(`getUserMedia 2:${e}`)
+					}		
+				}
+				captureUserMedia((stream) =>{
+					mediaStream = stream
+										
+					recorder = RecordRTC(stream, {
+						type: 'audio',
+						numberOfAudioChannels: 1
+					})
+					
+					recorder.startRecording()
+				})
+			}
+
+			xyy.stopRecord = (uploadfile_url='')=>{
+				
+				// XHR2/FormData
+				var xhr = (url, data, callback)=>{
+					var request = new XMLHttpRequest()
+					request.onreadystatechange = ()=> {
+						if (request.readyState == 4 && request.status == 200) {
+							callback(request.responseText)
+						}
+					}                  
+					
+					request.open('POST', url)
+					var formData = new FormData()
+					formData.append('file', data)
+					request.send(formData)
+				}
+				// debugger
+
+				return new Promise(resolve=>{
+					recorder.stopRecording(()=>{
+						var blob = recorder.getBlob()
+					
+						var fileName = 'fileName-23333' + '.mp3'
+						var file = new File([blob], fileName, {
+							// type: 'video/webm'
+							type:'video/mp3'
+						})
+
+
+						xhr(uploadfile_url, file, responseText=>{
+							console.log(responseText)
+							let res
+							try{
+								res = JSON.parse(responseText)
+								resolve(res)
+							}catch(e){console.log(e)}
+							
+							// resolve(responseText)
+						})
+
+
+
+						
+						if(mediaStream) mediaStream.stop()
+					})
+				})
+				
+			}
+		}
+		
 	</script>
 	<script>
+		var userid = location.hash.slice(1)
+		var gameid = 18
 		
-		{
-			let userid = location.hash.slice(1)
+		// {
+		// 	let userid = location.hash.slice(1)
 
-			// // alert(`mobile:${browser.version.mobile}`)
+		// 	// // alert(`mobile:${browser.version.mobile}`)
 
-			// //模拟iphash
-			let host = Math.random()>.5?'localhost':'172.20.1.41'
-			if(browser.version.mobile) host = '172.20.1.41'
+		// 	// //模拟iphash
+		// 	let host = Math.random()>.5?'localhost':'172.20.1.41'
+		// 	if(browser.version.mobile) host = '172.20.1.41'
 			
-			let rtcroom = RtcRoom(`https://${host}:8888`,{
-				userid,
-				gameid:19
-			})
-      
-			// // 玩家们上传了音频并生成了url 
-			rtcroom.on('server-client:uploadfile',data=>{
-				//console.log('server-client:uploadfile',data)
-				let $p = document.createElement('p')
-				$p.innerHTML = `${JSON.stringify(data)}`
-				document.querySelector('#rtc-room').appendChild($p)
-			})
+		// 	let rtcroom = RtcRoom(`https://${host}:8888`,{
+		// 		userid,
+		// 		gameid:19
+		// 	})
+
+		// 	// // 玩家们上传了音频并生成了url 
+		// 	rtcroom.on('server-client:uploadfile',data=>{
+		// 		//console.log('server-client:uploadfile',data)
+		// 		let $p = document.createElement('p')
+		// 		$p.innerHTML = `${JSON.stringify(data)}`
+		// 		document.querySelector('#rtc-room').appendChild($p)
+		// 	})
 			
-			document.querySelector('#btn-start-recording').onclick = ()=>{
-				//debugger
-				rtcroom.startRecord()
-			}
-			document.querySelector('#btn-stop-recording').onclick = ()=>{
-				//debugger
-				rtcroom.stopRecord()
-			}
+		// 	document.querySelector('#btn-start-recording').onclick = ()=>{
+		// 		//debugger
+		// 		rtcroom.startRecord()
+		// 	}
+		// 	document.querySelector('#btn-stop-recording').onclick = ()=>{
+		// 		//debugger
+		// 		rtcroom.stopRecord()
+		// 	}
 
 
-			document.querySelector('#ipt_emit').onclick = ()=>{
-				rtcroom.socket.emit('client->server:event1',{userid})
-				// console.log(rtcroom.socket)
-			}
-    }
+		// 	document.querySelector('#ipt_emit').onclick = ()=>{
+		// 		rtcroom.socket.emit('client->server:event1',{userid})
+		// 		// console.log(rtcroom.socket)
+		// 	}
+    // }
+
+		// //使用方案一：只想要这个玩家录音完后生成的一段录音mp3链接
+		// //开启录音
+		// xyy.startRecord()
+		// //结束录音
+		// xyy.stopRecord().then(url=>{
+
+		// })
+		document.querySelector('#btn-start-recording').onclick = ()=>{
+			//debugger
+			xyy.startRecord()
+		}
+		document.querySelector('#btn-stop-recording').onclick = ()=>{
+			//debugger
+			xyy.stopRecord(`https://172.20.1.41:3000/uploadFile/${gameid}/${userid}`).then(res=>{
+				console.log(res)
+			})
+		}
 
 
+
+		// //使用方案二： 使用sdk中socket录音聊天室，订阅到这个游戏中所有玩家的录音mp3链接
+
+		// let userid = location.hash.slice(1)
+		// let host = Math.random()>.5?'localhost':'172.20.1.41'
+		// if(browser.version.mobile) host = '172.20.1.41'
+
+		// let rtcroom = xyy.RtcRoom(`https://${host}:8888`,{gameid:17})
+
+		// let user = rtcroom.join({userid})
+
+		// // rtcroom 内部的socket对象
+		// // rtcroom.socket
+
+		// // 订阅这个游戏中所有玩家发布的录音mp3
+		// rtcroom.onuploadFile(data=>{
+		// 	// console.log(data)
+		// 	let $p = document.createElement('p')
+		// 	$p.innerHTML = `${JSON.stringify(data)}`
+		// 	document.querySelector('#rtc-room').appendChild($p)
+		// })
+		// document.querySelector('#btn-start-recording').onclick = ()=>{
+		// 	//debugger
+		// 	user.startRecord()
+
+		// }
+		// document.querySelector('#btn-stop-recording').onclick = ()=>{
+
+		// 	//debugger
+		// 	user.stopRecord()
+		// }
+
+		// // //这个玩家开始录音
+		// // user.startRecord()
+		// // //这个玩家结束录音
+		// // user.stopRecord()
+		
 
 	</script>
 </body>
