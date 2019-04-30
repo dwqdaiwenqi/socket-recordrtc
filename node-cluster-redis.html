@@ -12,39 +12,209 @@
 		<p>
 			<input id="ipt_emit" type="button" value="emit">
 		</p>
-		<ul id="msg-wrap">
-
-		</ul>
+		<p>
+			<button id="btn-start-recording">Start Recording</button>
+			<button id="btn-stop-recording">Stop Recording</button>
+		</p>
+		<div id="msg-wrap"></div>
+		<hr>
+		<div id="rtc-room"></div>
 	</main>
 	<script src="node_modules/socket.io-client/dist/socket.io.js"></script>
+	<script src="node_modules/recordrtc/RecordRTC.js"></script>
 	<script>
-
-		let userid = location.hash.slice(1)
-
-		//模拟iphash
-		let host = Math.random()>.5?'localhost':'172.20.1.41'
-		let socket = io.connect(`https://${host}:8888`)
-		socket.on('xmessage',data=>{
-			console.log('########',data)
-		})
-		socket.on('server->client:event1',(data)=>{
-			console.log('###',data)
-			let $li = document.createElement('li')
-			$li.innerHTML = JSON.stringify(data)
-			document.querySelector('#msg-wrap').appendChild($li)
-		})
-
-		document.querySelector('#ipt_emit').onclick = ()=>{
-			socket.emit('client->server:event1',{userid})
-			
+		//判断访问终端
+		var browser={
+			version:function(){
+				var u = navigator.userAgent, 
+					app = navigator.appVersion;
+				return {
+					trident: u.indexOf('Trident') > -1, //IE内核
+					presto: u.indexOf('Presto') > -1, //opera内核
+					webKit: u.indexOf('AppleWebKit') > -1, //苹果、谷歌内核
+					gecko: u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1,//火狐内核
+					mobile: !!u.match(/AppleWebKit.*Mobile.*/), //是否为移动终端
+					ios: !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios终端
+					android: u.indexOf('Android') > -1 || u.indexOf('Adr') > -1, //android终端
+					iPhone: u.indexOf('iPhone') > -1 , //是否为iPhone或者QQHD浏览器
+					iPad: u.indexOf('iPad') > -1, //是否iPad
+					webApp: u.indexOf('Safari') == -1, //是否web应该程序，没有头部与底部
+					weixin: u.indexOf('MicroMessenger') > -1, //是否微信 （2015-01-22新增）
+					qq: u.match(/\sQQ/i) == " qq" //是否QQ
+				};
+			}(),
+			language:(navigator.browserLanguage || navigator.language).toLowerCase()
 		}
+	</script>
+	<script>
+		var RtcRoom =(host,options={})=>{
+			
+			let mediaStream = null
+			let recorder = null
+			let socket = null
 
-		// let xhr = new XMLHttpRequest()
-		// xhr.onload = ()=>{
-		// 	console.log(xhr.responseText)
-		// }
-		// xhr.open('GET','http://localhost:8888')
-		// xhr.send(null)
+			// options = Object.assign({},options,{
+			// 	uploadfile_url:`http://172.20.1.41:3333/uploadFile/${options.gameid}/${options.userid}`
+			// })
+			
+			let that = {
+				socket,
+				startRecord(){
+					//debugger
+					// reusable getUserMedia
+					var captureUserMedia = (success_callback)=>{
+						var session = {
+								audio: true
+								//video: true
+						}
+						try{
+							// navigator.getUserMedia(session, success_callback, (error)=> {
+							// 	alert('Unable to capture your camera. Please check console logs.')
+							// 	console.error(error);
+							// })
+							navigator.mediaDevices.getUserMedia(session).then(stream=>{
+								success_callback(stream)
+							}).catch(e=>{
+								alert(`getUserMedia 1:${e}`)
+							})
+						}catch(e){
+							alert(`getUserMedia 2:${e}`)
+						}
+						
+					}
+					captureUserMedia((stream) =>{
+						// alert('stream!')
+
+							mediaStream = stream
+												
+							recorder = RecordRTC(stream, {
+								type: 'audio',
+								numberOfAudioChannels: 1
+							})
+							
+							recorder.startRecording()
+					})
+				},
+				stopRecord(){
+					function postFiles() {
+							var blob = recorder.getBlob();
+							////////////////////
+							//getting unique identifier for the file name
+							// var fileName = 'fileName-23333' + '.wav'
+							
+							// var file = new File([blob], fileName, {
+							// 		// type: 'video/webm'
+							// 		type:'video/wav'
+							// })
+							var fileName = 'fileName-23333' + '.mp3'
+							var file = new File([blob], fileName, {
+								// type: 'video/webm'
+								type:'video/mp3'
+							})
+
+							socket.emit('client->server:uploadfile',{
+								buffer:file,
+								gameid:options.gameid,
+								userid:options.userid
+							})
+						
+							
+							if(mediaStream) mediaStream.stop()
+							//////////////////////
+					}
+
+					recorder.stopRecording(postFiles)
+					
+				},
+				onFuc:null,
+				on(fns,fuc){
+					this.onFuc = fuc
+				},
+				i(){
+					////socket.close()
+				
+					this.socket = socket = io.connect(host)
+					socket.on('xmessage',data=>{
+
+						console.log('########',data)
+					})
+					socket.on('server->client:event1',(data)=>{
+						console.log('###',data)
+						let $li = document.createElement('li')
+						$li.innerHTML = JSON.stringify(data)
+						document.querySelector('#msg-wrap').appendChild($li)
+					})
+					socket.on('server->client:uploadfile',data=>{
+
+						console.log(data,'@@@@')
+					//return
+						if(data.gameid==options.gameid){
+							this.onFuc(data)
+						}
+						// console.log(data,'########')
+					})
+
+					socket.on('disconnect', () => {
+							console.log('you have been disconnected')
+					})
+
+					socket.on('reconnect', () => {
+							console.log('you have been reconnected')
+							
+					})
+
+					socket.on('reconnect_error', () => {
+							console.log('attempt to reconnect has failed')
+					})
+
+
+					return this
+				}
+			}
+			return that.i()
+		}
+	</script>
+	<script>
+		
+		{
+			let userid = location.hash.slice(1)
+
+			// // alert(`mobile:${browser.version.mobile}`)
+
+			// //模拟iphash
+			let host = Math.random()>.5?'localhost':'172.20.1.41'
+			if(browser.version.mobile) host = '172.20.1.41'
+			
+			let rtcroom = RtcRoom(`https://${host}:8888`,{
+				userid,
+				gameid:19
+			})
+      
+			// // 玩家们上传了音频并生成了url 
+			rtcroom.on('server-client:uploadfile',data=>{
+				//console.log('server-client:uploadfile',data)
+				let $p = document.createElement('p')
+				$p.innerHTML = `${JSON.stringify(data)}`
+				document.querySelector('#rtc-room').appendChild($p)
+			})
+			
+			document.querySelector('#btn-start-recording').onclick = ()=>{
+				//debugger
+				rtcroom.startRecord()
+			}
+			document.querySelector('#btn-stop-recording').onclick = ()=>{
+				//debugger
+				rtcroom.stopRecord()
+			}
+
+
+			document.querySelector('#ipt_emit').onclick = ()=>{
+				rtcroom.socket.emit('client->server:event1',{userid})
+				// console.log(rtcroom.socket)
+			}
+    }
+
+
 
 	</script>
 </body>
